@@ -1,0 +1,134 @@
+import RPi.GPIO as GPIO
+import time
+GPIO.setwarnings(False)
+
+GPIO.setmode(GPIO.BOARD) 
+
+GPIO.setup(19,GPIO.IN)       # sensor 1 ech
+GPIO.setup(21,GPIO.OUT)      # sensor 1 treg
+GPIO.setup(8,GPIO.IN)        # sensor 2 ech
+GPIO.setup(10,GPIO.OUT)      # sensor 2 treg
+GPIO.setup(12,GPIO.IN)       # sensor 3 ech
+GPIO.setup(16,GPIO.OUT)      # sensor 3 treg
+GPIO.setup(18,GPIO.IN)       # sensor 4 ech
+GPIO.setup(22,GPIO.OUT)      # sensor 4 treg
+GPIO.setup(29,GPIO.OUT)      # LED level 1
+GPIO.setup(31,GPIO.OUT)      # LED level 2
+GPIO.setup(33,GPIO.OUT)      # LED level 3
+GPIO.setup(36,GPIO.OUT)      # LED level 1
+GPIO.setup(38,GPIO.OUT)      # LED level 2
+GPIO.setup(40,GPIO.OUT)      # LED level 4
+GPIO.setup(35,GPIO.OUT)      # ->
+GPIO.setup(37,GPIO.OUT)      # <-
+
+d = 0.05                     # distace min
+count = 20                   # counter
+count2=20
+count3=40
+                    
+#--------------- fonctions -------------------
+
+def sensor(pino, pini):
+    GPIO.output(pino, False)
+    time.sleep(0.2)
+    GPIO.output(pino, True)
+    time.sleep(0.2)
+    GPIO.output(pino, False)
+
+    while GPIO.input(pini)==0:
+            signalOff=time.time()
+
+    while GPIO.input(pini)==1:
+            signalOn=time.time()
+
+    timePassed=signalOn-signalOff
+    distance=timePassed*171.50
+    return distance
+
+def traficcount(pinout,pinin,c):
+    if sensor(pinout,pinin)<=d:
+              if c<count:
+           	c+=1   
+    else:
+        if c>0:
+            c-=1
+    return c
+
+def trafictest(c,t):
+    if c==count:
+        t=1
+    elif c==0:
+        t=0
+    return t
+
+def level(q1,q2,p1,p2,p3):
+    if (q1==0 and q2==0):
+        GPIO.output(p1,GPIO.HIGH)
+        GPIO.output(p2,GPIO.LOW)
+        GPIO.output(p3,GPIO.LOW)
+        return 1
+    elif(q1==1 and q2==0):
+        GPIO.output(p1,GPIO.HIGH)
+        GPIO.output(p2,GPIO.HIGH)
+        GPIO.output(p3,GPIO.LOW)
+        return 2 
+    else:
+        GPIO.output(p1,GPIO.HIGH)
+        GPIO.output(p2,GPIO.HIGH)
+        GPIO.output(p3,GPIO.HIGH)
+        return 3 
+
+def control(s1,s2,x):
+    if s1<s2:
+        GPIO.output(35,GPIO.HIGH)
+        GPIO.output(37,GPIO.LOW)
+    elif s1>s2:
+        GPIO.output(37,GPIO.HIGH)
+        GPIO.output(35,GPIO.LOW)
+    else:
+	if x<=count2: 
+        	GPIO.output(35,GPIO.HIGH)
+        	GPIO.output(37,GPIO.LOW)
+		x+=1
+	elif x<=count3:
+		GPIO.output(37,GPIO.HIGH)
+        	GPIO.output(35,GPIO.LOW)
+		x+=1
+	else:
+		x=0
+    return x
+
+# -------------- main ---------------------
+
+c1=0
+c2=0
+c3=0
+c4=0
+t1=0
+t2=0
+t3=0
+t4=0
+x=0
+while True:
+    c1 =traficcount(21,19,c1)
+    c2 = traficcount(10,8,c2)
+    c3 = traficcount(16,12,c3)
+    c4 = traficcount(22,18,c4)
+    print c1,c2,c3,c4
+
+    t1 = trafictest(c1,t1)
+    t2 = trafictest(c2,t2)
+    t3 = trafictest(c3,t3)
+    t4 = trafictest(c4,t4)
+    print t1,t2,t3,t4
+
+    l1 = level(t1,t2,29,31,33)
+    l2 = level(t3,t4,36,38,40)
+    print l1,l2
+
+    x=control(l1,l2,x)
+    print x
+
+
+
+
